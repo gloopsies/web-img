@@ -4,28 +4,14 @@
 
 #include "args/args.h"
 #include "html_output/html_output.h"
+#include "image_manipulation/image_manipuation.h"
+#include "image_types/image_types.h"
 #include "output/output.h"
+#include "string_extended/string_extended.h"
 
 // Argp constants
 const char *argp_program_version = "web-img 1.0";
 const char *argp_program_bug_address = "github.com/vodnikangus";
-
-enum img_type { JPG, PNG, WEBP, UNKNOWN };
-
-// TODO: case sensitive
-enum img_type file_type(char *full_name) {
-  if (!strcmp(&full_name[strlen(full_name) - 3], "jpg") ||
-      !strcmp(&full_name[strlen(full_name) - 4], "jpeg")) {
-    return JPG;
-  }
-  if (!strcmp(&full_name[strlen(full_name) - 3], "png")) {
-    return PNG;
-  }
-  if (!strcmp(&full_name[strlen(full_name) - 4], "webp")) {
-    return WEBP;
-  }
-  return UNKNOWN;
-}
 
 // Save the image in different formats based on input
 int save_image(VipsImage *img, char *file_in, char *file_out) {
@@ -55,77 +41,6 @@ int save_image(VipsImage *img, char *file_in, char *file_out) {
   return 0;
 }
 
-int crop_center(struct arguments *arguments, VipsImage **image, int *w,
-                int *h) {
-  double aspect_in = (double)*w / *h;
-  double aspect_out = (float)arguments->width / arguments->height;
-
-  int crop_w = *w;
-  int crop_h = *h;
-  if (aspect_in > aspect_out)
-    crop_w = *h * aspect_out;
-  else
-    crop_h = *w * aspect_out;
-
-  if (vips_crop(*image, image, (*w - crop_w) / 2, (*h - crop_h) / 2, crop_w,
-                crop_h, NULL)) {
-    if (*image) g_object_unref(*image);
-    return PHOTO_SKIP;
-  }
-
-  *w = crop_w;
-  *h = crop_h;
-  return 0;
-}
-
-char *resize_width(char *file_in, char *file_out, VipsImage *in, int w,
-                   int width) {
-  VipsImage *out;
-  if (w >= width) {
-    char *name = malloc(strlen(file_out) + 7);
-    vips_resize(in, &out, (float)width / w, NULL);
-    sprintf(name, "%s-%dw", file_out, width);
-    if (out) {
-      save_image(out, file_in, name);
-      g_object_unref(out);
-    }
-    return name;
-  }
-  return NULL;
-}
-
-char *resize_height(char *file_in, char *file_out, VipsImage *in, int h,
-                    int height) {
-  VipsImage *out;
-  if (h >= height) {
-    char *name = malloc(strlen(file_out) + 7);
-    vips_resize(in, &out, (float)height / h, NULL);
-    sprintf(name, "%s-%dh", file_out, height);
-    if (out) {
-      save_image(out, file_in, name);
-      g_object_unref(out);
-    }
-    return name;
-  }
-  return NULL;
-}
-
-char *resize_factor(char *file_in, char *file_out, VipsImage *in, int x,
-                    int dest_x, float factor) {
-  VipsImage *out;
-  if (x > factor * dest_x) {
-    char *name = malloc(strlen(file_out) + 5);
-    vips_resize(in, &out, (float)(factor * dest_x) / x, NULL);
-    sprintf(name, "%s-%gx", file_out, factor);
-    if (out) {
-      save_image(out, file_in, name);
-      g_object_unref(out);
-    }
-    return name;
-  }
-  return NULL;
-}
-
 int scale_image(struct arguments *arguments, char *file_in, char *file_out,
                 struct output **outputs) {
   VipsImage *in, *out;
@@ -135,12 +50,14 @@ int scale_image(struct arguments *arguments, char *file_in, char *file_out,
     return PHOTO_SKIP;
   }
 
+  // If both width and height are provided crop image
+  if (arguments->width && arguments->height) {
+    in = image_crop_center(in, arguments->width, arguments->height);
+    if (!in) return PHOTO_SKIP;
+  }
+
   int w = vips_image_get_width(in);
   int h = vips_image_get_height(in);
-
-  // If both width and height are provided crop image
-  if (arguments->width && arguments->height)
-    if (crop_center(arguments, &in, &w, &h)) return PHOTO_SKIP;
 
   char *name = malloc(strlen(file_out) + 10);
   sprintf(name, "%s-original", file_out);
@@ -181,32 +98,58 @@ int scale_image(struct arguments *arguments, char *file_in, char *file_out,
 
   // export image with different scales and sizes
   if (!arguments->width && !arguments->height) {
-    if (!arguments->use_height) {
-      for (int i = 0; i < output_len; i++) {
-        (*outputs)[i].name =
-            resize_width(file_in, file_out, in, w, (*outputs)[i].size);
+    for (int i = 0; i < output_len; i++) {
+      VipsImage *out;
+
+      out = image_scale_size(in, (arguments->use_height) ? h : w,
+                             (*outputs)[i].size);
+
+      if (!out) {
+        (*outputs)[i].name = NULL;
+        continue;
       }
-    } else {
-      for (int i = 0; i < output_len; i++) {
-        (*outputs)[i].name =
-            resize_height(file_in, file_out, in, h, (*outputs)[i].size);
-      }
+
+      char *size;
+      size = itoa((*outputs)[i].size, 10);
+
+      name = malloc((strlen(file_out) + strlen(size) + 3) * sizeof(char));
+
+      sprintf(name, "%s-%s%c", file_out, size,
+              (arguments->use_height) ? 'h' : 'w');
+
+      (*outputs)[i].name = name;
+      save_image(in, file_in, name);
+
+      free(size);
+      g_object_unref(out);
     }
+    if (in) g_object_unref(in);
+    return 0;
   }
 
-  if (arguments->width) {
-    for (int i = 0; i < output_len; i++) {
-      (*outputs)[i].name = resize_factor(file_in, file_out, in, w,
-                                         arguments->width, (*outputs)[i].scale);
+  int size = (arguments->width) ? arguments->width : arguments->height;
+  for (int i = 0; i < output_len; i++) {
+    VipsImage *out;
+
+    out = image_scale_size(in, (arguments->width) ? w : h,
+                           (*outputs)[i].scale * size);
+
+    if (!out) {
+      (*outputs)[i].name = NULL;
+      continue;
     }
-  } else if (arguments->height) {
-    for (int i = 0; i < output_len; i++) {
-      (*outputs)[i].name = resize_factor(
-          file_in, file_out, in, h, arguments->height, (*outputs)[i].scale);
-    }
+    name = malloc((strlen(file_out) + 6) * sizeof(char));
+
+    sprintf(name, "%s-%gx", file_out, (*outputs)[i].scale);
+
+    (*outputs)[i].name = name;
+    save_image(in, file_in, name);
+
+    g_object_unref(out);
   }
 
   if (in) g_object_unref(in);
+  return 0;
 }
 
 int main(int argc, char **argv) {
@@ -217,24 +160,26 @@ int main(int argc, char **argv) {
   if (VIPS_INIT(argv[0])) vips_error_exit(NULL);
 
   // Loops through all input files
-  char *file_in;
-  char *file_out;
-  int end = 0;
+  char *file_in, *file_out;
+  char end = 0;
+  int status;
   do {
-    struct output *outputs;
+    struct output *outputs = NULL;
     switch (get_next_photo(arguments, &file_in, &file_out)) {
       case PHOTO_END:
-
         end = 1;
         break;
+
       case PHOTO_SKIP:
         continue;
+
       case PHOTO_OK:
-        scale_image(arguments, file_in, file_out, &outputs);
-        html_print(arguments, outputs);
+        status = scale_image(arguments, file_in, file_out, &outputs);
+        if (status == PHOTO_OK) html_print(arguments, outputs);
         free(file_in);
         free(file_out);
         break;
+
       default:
         fprintf(stderr, "Unknown error");
         vips_error_exit(NULL);

@@ -1,14 +1,24 @@
 #include "stack.h"
 
-struct stack *stack_new() {
-  struct stack *new_stack = malloc(sizeof(*new_stack));
+struct stack_element {
+  char *data;
+  struct stack_element *next;
+};
+
+typedef struct stack {
+  struct stack_element *elements;
+  int len;
+} Stack;
+
+Stack *stack_new() {
+  Stack *new_stack = malloc(sizeof(*new_stack));
   new_stack->elements = NULL;
   new_stack->len = 0;
 
   return new_stack;
 }
 
-int stack_push(struct stack *stack, char *data) {
+int stack_push(Stack *stack, char *data) {
   struct stack_element *new_element = malloc(sizeof(*new_element));
   if (!new_element) return 1;
 
@@ -20,7 +30,7 @@ int stack_push(struct stack *stack, char *data) {
   return 0;
 }
 
-char *stack_pop(struct stack *stack) {
+char *stack_pop(Stack *stack) {
   if (!stack->elements) return NULL;
 
   struct stack_element *pop_element = stack->elements;
@@ -31,13 +41,17 @@ char *stack_pop(struct stack *stack) {
   return data;
 }
 
-void stack_free(struct stack *stack) {
-  while (stack_pop(stack)) {
+void stack_free(Stack *stack) {
+  char *temp = stack_pop(stack);
+  while (temp) {
+    free(temp);
   }
   free(stack);
 }
 
-void stack_print(struct stack *stack) {
+int stack_length(Stack *stack) { return stack->len; }
+
+void stack_print(Stack *stack) {
   struct stack_element *elem = stack->elements;
   while (elem) {
     printf("%s\n", elem->data);

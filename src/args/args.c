@@ -58,9 +58,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
         fputs("At least 1 picture needed\n", stderr);
         exit(2);
       }
-      if (arguments->in_files->len < arguments->out_names->len) {
-        printf("Input: %d, out: %d\n", arguments->in_files->len,
-               arguments->out_names->len);
+      if (stack_length(arguments->in_files) <
+          stack_length(arguments->out_names)) {
+        printf("Input: %d, out: %d\n", stack_length(arguments->in_files),
+               stack_length(arguments->out_names));
         fputs("More output names then input files provided\n", stderr);
       }
       break;

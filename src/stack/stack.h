@@ -4,20 +4,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct stack_element {
-  char *data;
-  struct stack_element *next;
-};
+typedef struct stack Stack;
 
-struct stack {
-  struct stack_element *elements;
-  int len;
-};
-
-struct stack *stack_new();
-int stack_push(struct stack *, char *);
-char *stack_pop(struct stack *);
-void stack_free(struct stack *);
-void stack_print(struct stack *);
+Stack *stack_new();
+int stack_push(Stack *stack, char *data);
+char *stack_pop(Stack *stack);
+void stack_free(Stack *stack);
+int stack_length(Stack *stack);
+void stack_print(Stack *stack);
 
 #endif

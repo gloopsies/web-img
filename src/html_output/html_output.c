@@ -66,6 +66,8 @@ void html_print(struct arguments *arguments, struct output *outputs) {
   puts("\"");
   print_tabs(arguments, 2);
   puts("media=\"<!-- TODO -->\"");
+  print_tabs(arguments, 2);
+  puts("alt=\"<!-- TODO -->\"");
   print_tabs(arguments, 1);
   puts("/>");
 

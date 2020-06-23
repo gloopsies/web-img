@@ -36,11 +36,11 @@ int skip_exit(char **file_in, char **file_out, char *out_name) {
 
 enum photo_errors get_next_photo(struct arguments *arguments, char **file_in,
                                  char **file_out) {
-  if (arguments->in_files->len == 0) return PHOTO_END;
+  if (stack_length(arguments->in_files) == 0) return PHOTO_END;
 
   *file_in = stack_pop(arguments->in_files);
   char *out_name;
-  if (arguments->in_files->len < arguments->out_names->len) {
+  if (stack_length(arguments->in_files) < stack_length(arguments->out_names)) {
     out_name = stack_pop(arguments->out_names);
   } else {
     out_name = filename(strdup(*file_in));
@@ -61,9 +61,9 @@ enum photo_errors get_next_photo(struct arguments *arguments, char **file_in,
     if (g_file_test(*file_out, G_FILE_TEST_IS_DIR)) {
       fprintf(stdout, "Directory %s already exists. Overwrite? [Y-yes, N-no]: ",
               *file_out);
-      char c;
-      c = getchar();
-
+      char c = getchar();
+      while ((getchar()) != '\n');
+      
       // Overwrite exiting directory
       if (c != 'y' && c != 'Y') {
         return skip_exit(file_in, file_out, out_name);

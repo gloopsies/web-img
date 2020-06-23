@@ -42,9 +42,9 @@ static struct argp_option options[] = {
 
 // Structure used for parsing command line
 struct arguments {
-  struct stack *in_files;
+  Stack *in_files;
   char *out_dir;
-  struct stack *out_names;
+  Stack *out_names;
   char *tab;
   int width;
   int height;
