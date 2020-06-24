@@ -6,7 +6,9 @@
 #include <argp.h>
 #include <stdlib.h>
 
+#include "../file_data/file_data.h"
 #include "../stack/stack.h"
+#include "../stack/stack_file_data.h"
 
 #define USE_HEIGHT 1
 

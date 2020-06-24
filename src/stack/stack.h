@@ -7,8 +7,8 @@
 typedef struct stack Stack;
 
 Stack *stack_new();
-int stack_push(Stack *stack, char *data);
-char *stack_pop(Stack *stack);
+int stack_push(Stack *stack, void *data);
+void *stack_pop(Stack *stack);
 void stack_free(Stack *stack);
 int stack_length(Stack *stack);
 void stack_print(Stack *stack);

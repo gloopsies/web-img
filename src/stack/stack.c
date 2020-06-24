@@ -1,7 +1,7 @@
 #include "stack.h"
 
 struct stack_element {
-  char *data;
+  void *data;
   struct stack_element *next;
 };
 
@@ -18,7 +18,7 @@ Stack *stack_new() {
   return new_stack;
 }
 
-int stack_push(Stack *stack, char *data) {
+int stack_push(Stack *stack, void *data) {
   struct stack_element *new_element = malloc(sizeof(*new_element));
   if (!new_element) return 1;
 
@@ -30,7 +30,7 @@ int stack_push(Stack *stack, char *data) {
   return 0;
 }
 
-char *stack_pop(Stack *stack) {
+void *stack_pop(Stack *stack) {
   if (!stack->elements) return NULL;
 
   struct stack_element *pop_element = stack->elements;
@@ -54,7 +54,7 @@ int stack_length(Stack *stack) { return stack->len; }
 void stack_print(Stack *stack) {
   struct stack_element *elem = stack->elements;
   while (elem) {
-    printf("%s\n", elem->data);
+    printf("%s\n", (char *)elem->data);
     elem = elem->next;
   }
   printf("end\n");

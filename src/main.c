@@ -3,9 +3,9 @@
 #include <vips/vips.h>
 
 #include "args/args.h"
+#include "file_data/file_data.h"
 #include "html_output/html_output.h"
 #include "image_manipulation/image_manipuation.h"
-#include "image_types/image_types.h"
 #include "output/output.h"
 #include "string_extended/string_extended.h"
 
@@ -14,9 +14,9 @@ const char *argp_program_version = "web-img 1.0";
 const char *argp_program_bug_address = "github.com/vodnikangus";
 
 // Save the image in different formats based on input
-int save_image(VipsImage *img, char *file_in, char *file_out) {
+int save_image(VipsImage *img, struct file_data file_in, char *file_out) {
   char *out_name = malloc(strlen(file_out) + 6);
-  switch (file_type(file_in)) {
+  switch (file_in.type) {
     case JPG: {
       sprintf(out_name, "%s.jpg", file_out);
       if (vips_image_write_to_file(img, out_name, NULL)) {
@@ -44,12 +44,13 @@ int save_image(VipsImage *img, char *file_in, char *file_out) {
   return 0;
 }
 
-int scale_image(struct arguments *arguments, char *file_in, char *file_out,
-                struct output **outputs) {
+int scale_image(struct arguments *arguments, struct file_data file_in,
+                char *file_out, struct output **outputs) {
   VipsImage *in;
-  in = vips_image_new_from_file(file_in, NULL);
+
+  in = vips_image_new_from_file(file_in.full_path, NULL);
   if (!in) {
-    fprintf(stderr, "Cannot open file %s. Skipping...\n", file_in);
+    fprintf(stderr, "Cannot open file %s. Skipping...\n", file_in.full_path);
     return PHOTO_SKIP;
   }
 
@@ -163,7 +164,8 @@ int main(int argc, char **argv) {
   if (VIPS_INIT(argv[0])) vips_error_exit(NULL);
 
   // Loops through all input files
-  char *file_in, *file_out;
+  struct file_data *file_in;
+  char *file_out;
   char end = 0;
   int status;
   do {
@@ -177,9 +179,8 @@ int main(int argc, char **argv) {
         continue;
 
       case PHOTO_OK:
-        status = scale_image(arguments, file_in, file_out, &outputs);
+        status = scale_image(arguments, *file_in, file_out, &outputs);
         if (status == PHOTO_OK) html_print(arguments, outputs);
-        free(file_in);
         free(file_out);
         break;
 

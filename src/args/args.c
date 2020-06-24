@@ -76,9 +76,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state) {
     case 'n':
       arguments->no_compression = 1;
       break;
-    case ARGP_KEY_ARG:
-      stack_push(arguments->in_files, strdup(arg));
+    case ARGP_KEY_ARG:{
+      struct file_data *new = file_data_new(arg);
+      stack_push(arguments->in_files, new);
       break;
+    }
     case ARGP_KEY_END:
       if (state->arg_num <= 0) {
         fputs("At least 1 picture needed\n", stderr);
@@ -126,9 +128,10 @@ struct arguments *arguments_get(int argc, char **argv) {
 }
 
 void arguments_free(struct arguments *arguments) {
-  stack_free(arguments->in_files);
+  stack_file_data_free(arguments->in_files);
   stack_free(arguments->out_names);
   free(arguments->out_dir);
+  free(arguments->tab);
 
   free(arguments);
 }

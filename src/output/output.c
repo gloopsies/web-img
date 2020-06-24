@@ -1,57 +1,20 @@
 #include "output.h"
 
-// Returns name of a file from path (Without extensions)
-int filename(char *path, char **filename, char **ext) {
-  char *name = path;
-  char *slash = path;
-  do {
-    char *uslash = strchr(slash, '/');
-    slash = (uslash) ? uslash : strchr(slash, '\\');
-    name = (slash) ? ++slash : name;
-  } while (slash);
-
-  char *temp1 = strchr(name, '.');
-  if (!temp1) {
-    *filename = strdup(name);
-    *ext = NULL;
-    return 0;
-  }
-
-  char *temp2 = strchr(temp1, '.');
-  while (temp2) {
-    temp1 = temp2 + 1;
-    temp2 = strchr(temp1, '.');
-  }
-
-  *ext = strdup(temp1);
-  if (*ext == NULL) return 1;
-
-  *filename = malloc((temp1 - name + 1) * sizeof(char));
-  if (*filename == NULL) return 1;
-
-  strncpy(*filename, name, temp1 - name - 1);
-  *filename[temp1 - name - 1] = '\0';
-
-  // return ret;
-  return 0;
-}
-
 // If get_next_photo returns PHOTO_SKIP free unneeded memory
-int skip_exit(char **file_in, char **file_out, char *out_name) {
-  free(*file_in);
+int skip_exit(struct file_data **file_in, char **file_out) {
+  file_data_free(*file_in);
   free(*file_out);
-  free(out_name);
   return PHOTO_SKIP;
 }
 
-enum photo_errors get_next_photo(struct arguments *arguments, char **file_in,
-                                 char **file_out) {
+enum photo_errors get_next_photo(struct arguments *arguments,
+                                 struct file_data **file_in, char **file_out) {
   if (stack_length(arguments->in_files) == 0) return PHOTO_END;
 
-  *file_in = stack_pop(arguments->in_files);
-  char *out_name, *ext;
+  *file_in =(struct file_data*) stack_pop(arguments->in_files);
+  char *out_name;
 
-  filename(strdup(*file_in), &out_name, &ext);
+  out_name = (*file_in)->file_name;
 
   if (stack_length(arguments->in_files) < stack_length(arguments->out_names)) {
     out_name = stack_pop(arguments->out_names);
@@ -61,9 +24,10 @@ enum photo_errors get_next_photo(struct arguments *arguments, char **file_in,
   sprintf(*file_out, "%s/%s", arguments->out_dir, out_name);
 
   // Tests if input file exists
-  if (!g_file_test(*file_in, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_REGULAR)) {
-    fprintf(stderr, "Cannot open file %s. Skipping...\n", *file_in);
-    return skip_exit(file_in, file_out, out_name);
+  if (!g_file_test((*file_in)->full_path,
+                   G_FILE_TEST_EXISTS | G_FILE_TEST_IS_REGULAR)) {
+    fprintf(stderr, "File %s doesn't exist. Skipping...\n", (*file_in)->full_path);
+    return skip_exit(file_in, file_out);
   }
 
   // Check if output directory exists
@@ -78,7 +42,7 @@ enum photo_errors get_next_photo(struct arguments *arguments, char **file_in,
 
       // Overwrite exiting directory
       if (c != 'y' && c != 'Y') {
-        return skip_exit(file_in, file_out, out_name);
+        return skip_exit(file_in, file_out);
       }
     } else {
       // Location is not a directory
@@ -86,13 +50,13 @@ enum photo_errors get_next_photo(struct arguments *arguments, char **file_in,
               "Output location %s already exists and is not a directory. "
               "Skipping...\n",
               *file_out);
-      return skip_exit(file_in, file_out, out_name);
+      return skip_exit(file_in, file_out);
     }
   } else {
     // If path doesn't exist create it
     if (g_mkdir_with_parents(*file_out, 0774)) {
       fprintf(stderr, "Can't create dir %s. Skipping...\n", *file_out);
-      return skip_exit(file_in, file_out, out_name);
+      return skip_exit(file_in, file_out);
     }
   }
 
