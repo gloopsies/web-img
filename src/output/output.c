@@ -1,7 +1,7 @@
 #include "output.h"
 
 // Returns name of a file from path (Without extensions)
-char *filename(char *path) {
+int filename(char *path, char **filename, char **ext) {
   char *name = path;
   char *slash = path;
   do {
@@ -11,7 +11,11 @@ char *filename(char *path) {
   } while (slash);
 
   char *temp1 = strchr(name, '.');
-  if (!temp1) return strdup(name);
+  if (!temp1) {
+    *filename = strdup(name);
+    *ext = NULL;
+    return 0;
+  }
 
   char *temp2 = strchr(temp1, '.');
   while (temp2) {
@@ -19,11 +23,17 @@ char *filename(char *path) {
     temp2 = strchr(temp1, '.');
   }
 
-  char *ret = malloc((temp1 - name + 1) * sizeof(char));
-  strncpy(ret, name, temp1 - name - 1);
-  ret[temp1 - name - 1] = '\0';
+  *ext = strdup(temp1);
+  if (*ext == NULL) return 1;
 
-  return ret;
+  *filename = malloc((temp1 - name + 1) * sizeof(char));
+  if (*filename == NULL) return 1;
+
+  strncpy(*filename, name, temp1 - name - 1);
+  *filename[temp1 - name - 1] = '\0';
+
+  // return ret;
+  return 0;
 }
 
 // If get_next_photo returns PHOTO_SKIP free unneeded memory
@@ -39,11 +49,12 @@ enum photo_errors get_next_photo(struct arguments *arguments, char **file_in,
   if (stack_length(arguments->in_files) == 0) return PHOTO_END;
 
   *file_in = stack_pop(arguments->in_files);
-  char *out_name;
+  char *out_name, *ext;
+
+  filename(strdup(*file_in), &out_name, &ext);
+
   if (stack_length(arguments->in_files) < stack_length(arguments->out_names)) {
     out_name = stack_pop(arguments->out_names);
-  } else {
-    out_name = filename(strdup(*file_in));
   }
 
   *file_out = malloc(strlen(arguments->out_dir) + 2 * strlen(out_name) + 3);
@@ -62,8 +73,9 @@ enum photo_errors get_next_photo(struct arguments *arguments, char **file_in,
       fprintf(stdout, "Directory %s already exists. Overwrite? [Y-yes, N-no]: ",
               *file_out);
       char c = getchar();
-      while ((getchar()) != '\n');
-      
+      while ((getchar()) != '\n')
+        ;
+
       // Overwrite exiting directory
       if (c != 'y' && c != 'Y') {
         return skip_exit(file_in, file_out, out_name);

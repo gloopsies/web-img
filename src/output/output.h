@@ -11,7 +11,7 @@
 enum photo_errors { PHOTO_OK, PHOTO_END, PHOTO_SKIP, PHOTO_COUNT };
 
 // Returns name of a file from path (Without extensions)
-char *filename(char *path);
+int filename(char *path, char **filename, char **ext);
 
 // gets next photo from arguments struct and it's output data
 enum photo_errors get_next_photo(struct arguments *arguments, char **file_in,

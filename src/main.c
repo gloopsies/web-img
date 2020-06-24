@@ -24,13 +24,16 @@ int save_image(VipsImage *img, char *file_in, char *file_out) {
       }
       break;
     }
-    case PNG: {
+    case PNG:
+    case WEBP: {
       sprintf(out_name, "%s.png", file_out);
       if (vips_image_write_to_file(img, out_name, NULL)) {
         printf("Saving \"%s\" failed!\n", out_name);
       }
       break;
     }
+    case UNKNOWN:
+      break;
   }
 
   sprintf(out_name, "%s.webp", file_out);
@@ -43,7 +46,7 @@ int save_image(VipsImage *img, char *file_in, char *file_out) {
 
 int scale_image(struct arguments *arguments, char *file_in, char *file_out,
                 struct output **outputs) {
-  VipsImage *in, *out;
+  VipsImage *in;
   in = vips_image_new_from_file(file_in, NULL);
   if (!in) {
     fprintf(stderr, "Cannot open file %s. Skipping...\n", file_in);

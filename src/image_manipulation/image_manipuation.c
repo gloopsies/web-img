@@ -34,19 +34,3 @@ VipsImage *image_scale_size(VipsImage *in, int size_in, int size_out) {
 
   return out;
 }
-
-// char *resize_size(char *file_in, char *file_out, VipsImage *in, int input_x,
-//                   int output_x, char axis) {
-//   VipsImage *out;
-//   if (input_x >= output_x) {
-//     char *name = malloc(strlen(file_out) + 7);
-//     vips_resize(in, &out, (float)output_x / input_x, NULL);
-//     sprintf(name, "%s-%d%c", file_out, output_x, axis);
-//     if (out) {
-//       save_image(out, file_in, name);
-//       g_object_unref(out);
-//     }
-//     return name;
-//   }
-//   return NULL;
-// }
