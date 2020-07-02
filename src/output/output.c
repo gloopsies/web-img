@@ -11,10 +11,10 @@ enum photo_errors get_next_photo(struct arguments *arguments,
                                  struct file_data **file_in, char **file_out) {
   if (stack_length(arguments->in_files) == 0) return PHOTO_END;
 
-  *file_in =(struct file_data*) stack_pop(arguments->in_files);
+  *file_in = stack_pop(arguments->in_files);
   char *out_name;
 
-  out_name = (*file_in)->file_name;
+  out_name = strdup((*file_in)->file_name);
 
   if (stack_length(arguments->in_files) < stack_length(arguments->out_names)) {
     out_name = stack_pop(arguments->out_names);
@@ -34,8 +34,11 @@ enum photo_errors get_next_photo(struct arguments *arguments,
   if (g_file_test(*file_out, G_FILE_TEST_EXISTS)) {
     // If output path exists check if it is directory
     if (g_file_test(*file_out, G_FILE_TEST_IS_DIR)) {
-      fprintf(stdout, "Directory %s already exists. Overwrite? [Y-yes, N-no]: ",
+      fprintf(stdout,
+              "Directory %s already exists. "
+              "Overwrite? [Y-yes, N-no]: ",
               *file_out);
+
       char c = getchar();
       while ((getchar()) != '\n')
         ;
@@ -60,7 +63,8 @@ enum photo_errors get_next_photo(struct arguments *arguments,
     }
   }
 
-  sprintf(*file_out, "%s/%s", *file_out, out_name);
+  char *copy = *file_out;
+  sprintf(*file_out, "%s/%s", copy, out_name);
   free(out_name);
   return PHOTO_OK;
 }

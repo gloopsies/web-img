@@ -23,7 +23,13 @@ static struct argp_option options[] = {
   {"use-height", USE_HEIGHT, 0, 0, "Use height instead of width for default sizes", 2},
 
   {0, 0, 0, 0, "Quality:", 3},
-  {"no-compression", 'n', 0, 0, "Disable compression for jpg files", 3},
+  {"lossy-compression", LOSSY_COMPRESSION, "COMPRESSION", 0, "Set compression quality for lossy formats (1-100), defualt = 75", 3},
+  {"lossless-compression", LOSSLESS_COMPRESSION, "COMPRESSION", 0, "Set compression level for lossless formats (0-100), default = 75", 3},
+  {"webp-compression-type", WEBP_COMPRESSION_TYPE, "COMPRESSION_TYPE", 0, "Set compression type for WEBP pictures:            "
+                                                                          "\t0-DEFAULT(based on input image)                    "
+                                                                          "\t1-LOSSLESS                                         "
+                                                                          "\t2-LOSSY                                        "
+                                                                          "default = 0", 3},
   
   {0, 0, 0, 0, "Usage:", -1},
   {0}
@@ -73,10 +79,32 @@ error_t parse_opt(int key, char *arg, struct argp_state *state) {
     case USE_HEIGHT:
       arguments->use_height = 1;
       break;
-    case 'n':
-      arguments->no_compression = 1;
+    case LOSSY_COMPRESSION:
+      arguments->lossy_compression = atoi(arg);
+      if (arguments->lossy_compression < 1 ||
+          arguments->lossy_compression > 100) {
+        arguments->lossy_compression = 75;
+        fprintf(stderr, "Lossy compression %s out of bounds. Skipping...\n",
+                arg);
+      }
       break;
-    case ARGP_KEY_ARG:{
+    case LOSSLESS_COMPRESSION:
+      arguments->lossless_compression = atoi(arg);
+      if (arguments->lossless_compression < 0 ||
+          arguments->lossless_compression > 100) {
+        arguments->lossless_compression = 6;
+        fprintf(stderr, "Lossless compression %s out of bounds. Skipping...\n", arg);
+      }
+      break;
+    case WEBP_COMPRESSION_TYPE:
+      arguments->lossless_compression = atoi(arg);
+      if (arguments->webp_compression_type < 0 ||
+          arguments->webp_compression_type > 2) {
+        arguments->lossless_compression = 0;
+        fprintf(stderr, "Invalid WEBP compression type %s. Skipping...\n", arg);
+      }
+      break;
+    case ARGP_KEY_ARG: {
       struct file_data *new = file_data_new(arg);
       stack_push(arguments->in_files, new);
       break;
@@ -115,7 +143,9 @@ struct arguments *arguments_get(int argc, char **argv) {
   arguments->width = 0;
   arguments->height = 0;
   arguments->use_height = 0;
-  arguments->no_compression = 0;
+  arguments->lossy_compression = 75;
+  arguments->lossless_compression = 75;
+  arguments->webp_compression_type = WEBP_DEFAULT;
 
   argp_parse(&argp, argc, argv, 0, 0, arguments);
 

@@ -14,12 +14,14 @@ const char *argp_program_version = "web-img 1.0";
 const char *argp_program_bug_address = "github.com/vodnikangus";
 
 // Save the image in different formats based on input
-int save_image(VipsImage *img, struct file_data file_in, char *file_out) {
+int save_image(struct arguments *arguments, VipsImage *img,
+               struct file_data file_in, char *file_out) {
   char *out_name = malloc(strlen(file_out) + 6);
   switch (file_in.type) {
     case JPG: {
       sprintf(out_name, "%s.jpg", file_out);
-      if (vips_image_write_to_file(img, out_name, NULL)) {
+      if (vips_jpegsave(img, out_name, "Q", arguments->lossy_compression,
+                        NULL)) {
         printf("Saving \"%s\" failed!\n", out_name);
       }
       break;
@@ -27,7 +29,8 @@ int save_image(VipsImage *img, struct file_data file_in, char *file_out) {
     case PNG:
     case WEBP: {
       sprintf(out_name, "%s.png", file_out);
-      if (vips_image_write_to_file(img, out_name, NULL)) {
+      if (vips_pngsave(img, out_name, "compression",
+                       (int)(arguments->lossless_compression / 12.5), NULL)) {
         printf("Saving \"%s\" failed!\n", out_name);
       }
       break;
@@ -37,9 +40,36 @@ int save_image(VipsImage *img, struct file_data file_in, char *file_out) {
   }
 
   sprintf(out_name, "%s.webp", file_out);
-  if (vips_image_write_to_file(img, out_name, NULL)) {
+  char status = 0;
+  switch (arguments->webp_compression_type) {
+    case WEBP_DEFAULT:
+      if (file_in.type == JPG)
+        status = vips_webpsave(img, out_name, "Q", arguments->lossy_compression,
+                               NULL);
+      else
+        status = vips_webpsave(
+            img, out_name, "lossless", 1, "reduction_effort",
+            (int)(arguments->lossless_compression / 16.66666), NULL);
+      break;
+    case WEBP_LOSSLESS:
+      status = vips_webpsave(img, out_name, "lossless", 1, "reduction_effort",
+                             (int)(arguments->lossless_compression / 16.66666),
+                             NULL);
+      break;
+    case WEBP_LOSSY:
+      status =
+          vips_webpsave(img, out_name, "Q", arguments->lossy_compression, NULL);
+      break;
+    default:
+      fputs("Unkown error, exiting...\n", stderr);
+      vips_error_exit(NULL);
+      break;
+  }
+
+  if (status) {
     printf("Saving \"%s\" failed!\n", out_name);
   }
+
   free(out_name);
   return 0;
 }
@@ -65,7 +95,7 @@ int scale_image(struct arguments *arguments, struct file_data file_in,
 
   char *name = malloc(strlen(file_out) + 10);
   sprintf(name, "%s-original", file_out);
-  save_image(in, file_in, name);
+  save_image(arguments, in, file_in, name);
   free(name);
 
   // Provide sizes or scale based on input arguments
@@ -122,7 +152,7 @@ int scale_image(struct arguments *arguments, struct file_data file_in,
               (arguments->use_height) ? 'h' : 'w');
 
       (*outputs)[i].name = name;
-      save_image(in, file_in, name);
+      save_image(arguments, in, file_in, name);
 
       free(size);
       g_object_unref(out);
@@ -147,7 +177,7 @@ int scale_image(struct arguments *arguments, struct file_data file_in,
     sprintf(name, "%s-%gx", file_out, (*outputs)[i].scale);
 
     (*outputs)[i].name = name;
-    save_image(in, file_in, name);
+    save_image(arguments, in, file_in, name);
 
     g_object_unref(out);
   }
@@ -180,7 +210,8 @@ int main(int argc, char **argv) {
 
       case PHOTO_OK:
         status = scale_image(arguments, *file_in, file_out, &outputs);
-        if (status == PHOTO_OK) html_print(arguments, outputs);
+        if (status == PHOTO_OK) html_print(arguments, *file_in, outputs);
+        file_data_free(file_in);
         free(file_out);
         break;
 

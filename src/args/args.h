@@ -11,6 +11,12 @@
 #include "../stack/stack_file_data.h"
 
 #define USE_HEIGHT 1
+#define LOSSY_COMPRESSION 2
+#define LOSSLESS_COMPRESSION 3
+#define WEBP_COMPRESSION_TYPE 4
+#define WEBP_COMPRESSION_QUALITY 5
+
+enum WEBP_COMPRESSION { WEBP_DEFAULT, WEBP_LOSSY, WEBP_LOSSLESS };
 
 // Structure used for parsing command line
 struct arguments {
@@ -21,7 +27,9 @@ struct arguments {
   int width;
   int height;
   char use_height;
-  char no_compression;
+  short lossy_compression;
+  short lossless_compression;
+  enum WEBP_COMPRESSION webp_compression_type;
 };
 
 // Funcion for parsing arguments

@@ -2,6 +2,7 @@
 #define __html_output__
 
 #include "../args/args.h"
+#include "../file_data/file_data.h"
 
 struct output {
   char *name;
@@ -9,6 +10,7 @@ struct output {
   int size;
 };
 
-void html_print(struct arguments *arguments, struct output *outputs);
+void html_print(struct arguments *arguments, struct file_data file_in,
+                struct output *outputs);
 
 #endif
